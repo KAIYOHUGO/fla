@@ -1,4 +1,4 @@
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, ValueEnum};
 use std::{
     error::Error,
     fs::File,
@@ -106,11 +106,11 @@ fn format(ast: syntax::Root, writer: &mut impl Write) -> io::Result<()> {
         for value in pair.value {
             match value {
                 syntax::Value::Node(node) => {
-                    writeln!(writer, "    {} [", node.speech)?;
+                    writeln!(writer, "    {} {{", node.speech)?;
                     for line in node.text.lines().map(|s| s.trim()) {
                         writeln!(writer, "        {}", line)?;
                     }
-                    writeln!(writer, "    ]")?;
+                    writeln!(writer, "    }}")?;
                 }
                 syntax::Value::Text(text) => {
                     for line in text.lines().map(|s| s.trim()) {

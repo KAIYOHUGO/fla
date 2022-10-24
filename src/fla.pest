@@ -6,11 +6,11 @@ key = {(!"{" ~ ANY)+ }
 
 value = {(node | text)+ }
 
-node = {node_char ~ node_text ~ "]"}
+node = {node_char ~ node_text ~ "}"}
 
-node_char = _{newline ~ space* ~ speech ~ space* ~ "["}
+node_char = _{newline ~ space* ~ speech ~ space* ~ "{"}
 
-node_text = {(!"]" ~ ANY)+}
+node_text = {(!"}" ~ ANY)+}
 
 text = {(!(node_char | "}") ~ ANY)+}
 
