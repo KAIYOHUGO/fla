@@ -12,13 +12,18 @@ pub struct PestParser {}
 #[derive(Debug, Clone)]
 pub enum Item<'s> {
     Pair(Pair<'s>),
-    Comment(&'s str),
 }
 
 #[derive(Debug, Clone)]
 pub struct Pair<'s> {
-    pub key: &'s str,
+    pub key: Vec<Key<'s>>,
     pub value: Vec<Value<'s>>,
+}
+
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord)]
+pub enum Key<'s> {
+    Text(&'s str),
+    Cloze(&'s str),
 }
 
 #[derive(Debug, Clone)]
@@ -68,7 +73,19 @@ pub fn parse(s: &str) -> Result<Root, Error<Rule>> {
         .map(|item| match item.as_rule() {
             Rule::pair => {
                 let mut inner = item.into_inner();
-                let key = inner.next().unwrap().as_str().trim();
+                let key = {
+                    inner
+                        .next()
+                        .unwrap()
+                        .into_inner()
+                        .filter_map(|key| match key.as_rule() {
+                            Rule::key_text => Some(Key::Text(clean_text(key.as_str())?)),
+                            Rule::cloze => Some(Key::Cloze(clean_text(key.as_str())?)),
+                            _ => unreachable!(),
+                        })
+                        .collect()
+                };
+
                 let value = {
                     let mut r = vec![];
                     for value in inner.next().unwrap().into_inner() {
@@ -88,7 +105,7 @@ pub fn parse(s: &str) -> Result<Root, Error<Rule>> {
                                 let text = inner.next().unwrap().as_str().trim();
                                 r.push(Value::Node(Node { speech, text }));
                             }
-                            Rule::text => {
+                            Rule::value_text => {
                                 let s = value.as_str().trim();
                                 if !s.is_empty() {
                                     r.push(Value::Text(s));
@@ -101,9 +118,17 @@ pub fn parse(s: &str) -> Result<Root, Error<Rule>> {
                 };
                 Item::Pair(Pair { key, value })
             }
-            Rule::comment => Item::Comment(item.as_str()),
             _ => unreachable!(),
         })
         .collect();
     Ok(r)
+}
+
+fn clean_text(value: &str) -> Option<&str> {
+    let s = value.trim();
+    if s.is_empty() {
+        None
+    } else {
+        Some(s)
+    }
 }

@@ -58,29 +58,40 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn build(ast: syntax::Root, writer: &mut impl Write) -> io::Result<()> {
     for item in ast {
-        if let syntax::Item::Pair(pair) = item {
-            let start_with = pair.key.chars().next().unwrap();
-            writeln!(writer, "- {} #card #start_with_{}", pair.key, start_with)?;
-            for value in pair.value {
-                match value {
-                    syntax::Value::Node(node) => {
-                        let mut lines = node.text.lines().map(|s| s.trim());
-                        writeln!(
-                            writer,
-                            "    - =={}.== {}",
-                            node.speech,
-                            lines.next().unwrap()
-                        )?;
-                        for line in lines {
-                            writeln!(writer, "      {}", line)?;
-                        }
+        let syntax::Item::Pair(pair) = item;
+
+        let start_with = match pair.key.first().unwrap() {
+            syntax::Key::Text(s) | syntax::Key::Cloze(s) => s.chars().next().unwrap(),
+        };
+
+        let key: String = pair
+            .key
+            .into_iter()
+            .map(|x| match x {
+                syntax::Key::Text(s) => s.into(),
+                syntax::Key::Cloze(s) => format!(" {{{{cloze {}}}}} ", s),
+            })
+            .collect();
+        writeln!(writer, "- {} #card #start_with_{}", key, start_with)?;
+        for value in pair.value {
+            match value {
+                syntax::Value::Node(node) => {
+                    let mut lines = node.text.lines().map(|s| s.trim());
+                    writeln!(
+                        writer,
+                        "    - =={}.== {}",
+                        node.speech,
+                        lines.next().unwrap()
+                    )?;
+                    for line in lines {
+                        writeln!(writer, "      {}", line)?;
                     }
-                    syntax::Value::Text(text) => {
-                        let mut lines = text.lines().map(|s| s.trim());
-                        writeln!(writer, "    - {}", lines.next().unwrap())?;
-                        for line in lines {
-                            writeln!(writer, "      {}", line)?;
-                        }
+                }
+                syntax::Value::Text(text) => {
+                    let mut lines = text.lines().map(|s| s.trim());
+                    writeln!(writer, "    - {}", lines.next().unwrap())?;
+                    for line in lines {
+                        writeln!(writer, "      {}", line)?;
                     }
                 }
             }
@@ -93,16 +104,23 @@ fn format(ast: syntax::Root, writer: &mut impl Write) -> io::Result<()> {
     let mut pairs: Vec<_> = ast
         .into_iter()
         .filter_map(|item| {
-            if let syntax::Item::Pair(pair) = item {
-                Some(pair)
-            } else {
-                None
-            }
+            let syntax::Item::Pair(pair) = item;
+            Some(pair)
         })
         .collect();
-    pairs.sort_by(|a, b| a.key.cmp(b.key));
+    pairs.sort_by(|a, b| a.key.cmp(&b.key));
     for pair in pairs {
-        writeln!(writer, "{} {{", pair.key)?;
+        let key: String = {
+            pair.key
+                .into_iter()
+                .map(|x| match x {
+                    syntax::Key::Text(s) => s.into(),
+                    syntax::Key::Cloze(s) => format!(" {{{{{}}}}} ", s),
+                })
+                .collect()
+        };
+
+        writeln!(writer, "{} {{", key)?;
         for value in pair.value {
             match value {
                 syntax::Value::Node(node) => {

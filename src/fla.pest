@@ -2,9 +2,13 @@ root = {(newline | pair)*}
 
 pair = {key ~ "{" ~ value ~ "}" }
 
-key = {(!"{" ~ ANY)+ }
+key = {(key_text | "{{" ~ cloze ~ "}}")+}
 
-value = {(node | text)+ }
+key_text = {(!"{" ~ ANY)+}
+
+cloze = {(!"}}" ~ ANY)+}
+
+value = {(node | value_text)+ }
 
 node = {node_char ~ node_text ~ "}"}
 
@@ -12,12 +16,10 @@ node_char = _{newline ~ space* ~ speech ~ space* ~ "{"}
 
 node_text = {(!"}" ~ ANY)+}
 
-text = {(!(node_char | "}") ~ ANY)+}
+value_text = {(!(node_char | "}") ~ ANY)+}
 
 speech = {"n" | "v" | "o" | "adj" | "adv" | "prep" | "pron"}
 
 space = _{WHITE_SPACE}
 
-newline = _{NEWLINE | comment}
-
-comment = {"#" ~ space ~ (!NEWLINE ~ ANY)+}
+newline = _{NEWLINE}
